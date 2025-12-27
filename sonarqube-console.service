@@ -1,0 +1,21 @@
+[Unit]
+Description=SonarQube (console mode for debugging)
+After=network.target postgrespro-1c-16.service
+Wants=postgrespro-1c-16.service
+
+[Service]
+Type=simple
+User=sonar
+Group=sonar
+WorkingDirectory=/opt/sonarqube
+ExecStart=/opt/sonarqube/bin/linux-x86-64/sonar.sh console
+Restart=always
+RestartSec=10
+LimitNOFILE=65536
+LimitNPROC=4096
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sonarqube-console
+
+[Install]
+WantedBy=multi-user.target
