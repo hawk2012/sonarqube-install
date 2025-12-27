@@ -35,7 +35,7 @@
 
 1. Склонируйте репозиторий:
    ```bash
-   git clone https://github.com/ваш-логин/sonarqube-setup.git
+   git clone https://github.com/hawk2012/sonarqube-install.git
    cd sonarqube-setup
    ```
 
