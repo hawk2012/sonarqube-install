@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # === КОНФИГУРАЦИЯ ===
-SONARQUBE_VERSION="sonarqube-9.9.8.100196"
+SONARQUBE_VERSION="sonarqube-25.12.0.117093"  # ← менять здесь
 DB_USER="sonar"
 DB_PASS="sonar"
 DB_NAME="sonarqube"
@@ -17,10 +17,17 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
-# === 1. Java 17 ===
-echo "[*] Установка OpenJDK 17..."
-apt update
-apt install -y openjdk-17-jdk
+# === 1. Установка Eclipse Temurin JDK 17 (официально рекомендовано Sonar) ===
+echo "[*] Установка Eclipse Temurin JDK 17..."
+if ! command -v java &> /dev/null || ! java -version 2>&1 | grep -q "Temurin"; then
+  apt update
+  wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public 2>/dev/null | gpg --dearmor | sudo tee /usr/share/keyrings/adoptium.gpg >/dev/null
+  echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" | sudo tee /etc/apt/sources.list.d/adoptium.list
+  apt update
+  apt install -y temurin-17-jdk
+else
+  echo "[*] Temurin JDK 17 уже установлен"
+fi
 
 # === 2. Postgres Pro 16 для 1С ===
 echo "[*] Установка Postgres Pro 16..."
@@ -53,7 +60,9 @@ sysctl -p >/dev/null
 echo "[*] Скачивание и распаковка SonarQube..."
 cd /tmp
 apt install -y unzip
-wget -O "${SONARQUBE_VERSION}.zip" "https://binaries.sonarsource.com/Distribution/sonarqube/${SONARQUBE_VERSION}.zip"
+# ИСПРАВЛЕНО: убран пробел в URL!
+SONAR_URL="https://binaries.sonarsource.com/Distribution/sonarqube/${SONARQUBE_VERSION}.zip"
+wget -O "${SONARQUBE_VERSION}.zip" "$SONAR_URL"
 unzip -q "${SONARQUBE_VERSION}.zip"
 rm -rf "$INSTALL_DIR"
 mv "/tmp/$SONARQUBE_VERSION" "$INSTALL_DIR"
@@ -76,7 +85,7 @@ grep -q "^sonar.ce.javaOpts=" "$CONF" || echo "
 sonar.ce.javaOpts=-Xmx4G -Xms1G -XX:+UseG1GC -XX:+HeapDumpOnOutOfMemoryError
 " >> "$CONF"
 
-# === 8. Создание systemd-юнита ===
+# === 8. Создание systemd-юнита (production) ===
 echo "[*] Создание systemd-службы..."
 cat > /etc/systemd/system/sonarqube.service <<EOF
 [Unit]
@@ -102,10 +111,7 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-# Перезагрузка демона systemd
 systemctl daemon-reload
-
-# Включение автозапуска
 systemctl enable sonarqube
 
 echo
