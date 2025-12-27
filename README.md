@@ -36,7 +36,7 @@
 1. Склонируйте репозиторий:
    ```bash
    git clone https://github.com/hawk2012/sonarqube-install.git
-   cd sonarqube-setup
+   cd sonarqube-install
    ```
 
 2. Откройте `install-sonarqube.sh` и укажите нужную версию:
